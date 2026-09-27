@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { supabase, signIn, signUp, adminSignIn, signOut, fetchProfile, API_BASE } from './lib/supabase';
 import './App.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const API_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
 const AUTH_TOKEN_KEY = 'thrift_apparel_token';
 const USER_KEY = 'thrift_apparel_user';
@@ -53,6 +53,29 @@ function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
+  // Keep the Supabase session (and access token) in sync with the app.
+  // supabase-js refreshes the token automatically before it expires.
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setToken(session.access_token);
+
+        if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
+          fetchProfile(session.access_token)
+            .then((profile) => profile && setUser(profile))
+            .catch(() => {});
+        }
+      } else {
+        setToken('');
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   useEffect(() => {
     if (token) {
       localStorage.setItem(AUTH_TOKEN_KEY, token);
@@ -75,6 +98,7 @@ function App() {
   };
 
   const logout = () => {
+    signOut();
     setToken('');
     setUser(null);
   };
@@ -591,16 +615,28 @@ function AuthPage({ mode, onAuth }) {
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', address: '' });
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   const submit = async (event) => {
     event.preventDefault();
+    setError('');
+    setNotice('');
+
     try {
-      const endpoint = mode === 'register' ? '/auth/register' : '/auth/login';
-      const data = await apiFetch(endpoint, {
-        method: 'POST',
-        body: JSON.stringify(form),
-      });
-      onAuth(data.token, data.user);
+      if (mode === 'register') {
+        const result = await signUp(form);
+
+        if (result.needsConfirmation) {
+          setNotice(`Almost there! We sent a confirmation link to ${result.email}. Confirm your email, then log in.`);
+          return;
+        }
+
+        onAuth(result.token, result.user);
+      } else {
+        const result = await signIn(form.email, form.password);
+        onAuth(result.token, result.user);
+      }
+
       navigate('/shop');
     } catch (err) {
       setError(err.message);
@@ -612,8 +648,9 @@ function AuthPage({ mode, onAuth }) {
       <form className="auth-card" onSubmit={submit}>
         <h2>{mode === 'register' ? 'Create account' : 'Welcome back'}</h2>
         {error && <p className="error-text">{error}</p>}
+        {notice && <p className="error-text" style={{ color: '#1a7f37' }}>{notice}</p>}
         {mode === 'register' && (
-          <input value={form.name} placeholder="Full Name" onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <input required value={form.name} placeholder="Full Name" onChange={(e) => setForm({ ...form, name: e.target.value })} />
         )}
         <input type="email" value={form.email} placeholder="Email" onChange={(e) => setForm({ ...form, email: e.target.value })} />
         <input type="password" value={form.password} placeholder="Password" onChange={(e) => setForm({ ...form, password: e.target.value })} />
@@ -848,12 +885,11 @@ function AdminLoginPage({ onAuth }) {
 
   const login = async (event) => {
     event.preventDefault();
+    setError('');
+
     try {
-      const data = await apiFetch('/auth/admin-login', {
-        method: 'POST',
-        body: JSON.stringify(form),
-      });
-      onAuth(data.token, data.user);
+      const result = await adminSignIn(form.email, form.password);
+      onAuth(result.token, result.user);
       navigate('/admin');
     } catch (err) {
       setError(err.message);

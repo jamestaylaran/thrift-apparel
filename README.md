@@ -1,103 +1,204 @@
 # Thrift Apparel
 
-A full-stack thrift fashion e-commerce application built with React, Express, and MySQL.
+A full-stack thrift fashion e-commerce application built with React (Vite), Express, and **Supabase**.
 
 ## Features
 
 - Customer storefront and product catalog
-- Customer registration and login
+- Customer registration and login (**Supabase Auth**)
 - Admin login and protected dashboard
 - Product, inventory, order, and customer management
+- Product image upload from the admin dashboard (**Supabase Storage**)
 - Wishlist and cart flows with stock validation
-- Checkout with database-backed order creation
+- Checkout with database-backed, atomic order creation
 - Responsive design for desktop, tablet, and mobile
 
 ## Tech Stack
 
 - Frontend: React + Vite
-- Backend: Node.js + Express
-- Database: MySQL
-- Authentication: JWT + bcrypt
+- Backend: Node.js + Express (deployed as one Vercel Function)
+- Database: Supabase (Postgres) — users, products, categories, carts, orders/sales, reviews
+- Authentication: Supabase Auth (email + password), verified by the API
+- Storage: Supabase Storage (`product-images` bucket)
 
 ## Project Structure
 
 - `client/` – React frontend
-- `server/` – Express API
-- `database/` – MySQL schema and seed SQL
+- `server/` – Express API (all routes use the Supabase JS client)
+- `lib/supabase.js` – server-side Supabase client (**service-role key**)
+- `client/src/lib/supabase.js` – browser Supabase client (publishable key) + auth helpers
+- `api/index.js` – Vercel entry point that exports the Express app
+- `database/supabase_setup.sql` – full database schema for Supabase (run once)
+- `database/supabase_seed.sql` – sample categories and products (optional)
 
-## Setup
+---
+
+## 1. Supabase setup
+
+1. Create a project at <https://supabase.com/dashboard> (you already have one:
+   `ygaaxvyhjiqigxeavfof`).
+2. Open **SQL Editor → New query**, paste the entire contents of
+   `database/supabase_setup.sql`, and press **Run**.
+   This drops the old MySQL-style tables and recreates them linked to Supabase Auth,
+   with Row Level Security enabled, the checkout function, and the Storage bucket.
+3. *(Optional)* Seed sample data: paste `database/supabase_seed.sql` and **Run**.
+4. Go to **Project Settings → API** and copy:
+   - **Project URL** → `SUPABASE_URL`
+   - **Project reference keys → secret** (`sb_secret_…`) → `SUPABASE_SECRET_KEY`
+   - **Project reference keys → publishable** (`sb_publishable_…`) →
+     `VITE_SUPABASE_PUBLISHABLE_KEY` (you may already have this value)
+
+   Put the two `SUPABASE_*` values in the root `.env.local` (server) and the
+   `VITE_*` values in `client/.env` (browser) — see `client/.env.example`.
+
+### Create your admin account
+
+1. Register an account on the site (or via the Admin Login page), then run:
+
+   ```sql
+   update public.users set role = 'admin' where email = 'you@example.com';
+   ```
+
+   Signups can never grant themselves the admin role — it is only set here.
+   Alternative from the command line: `node scripts/promote-admin.mjs you@example.com`
+
+### Email confirmation (recommended setting for development)
+
+Supabase confirms emails by default, so new signups must click a link in their
+inbox before they can log in. To simplify testing, turn it off under
+**Authentication → Sign In / Providers → Email → Confirm email**. If you leave it
+on, the register page shows a "check your email" message instead of logging in.
+
+---
+
+## 2. Local development
 
 1. Install dependencies:
-   
+
+   ```bash
    npm install
    cd client && npm install && cd ..
+   ```
 
-2. Create MySQL database:
+2. Configure environment variables:
 
-   mysql -u root -p
-   CREATE DATABASE thrift_apparel;
+   - Root `.env.local`: `SUPABASE_URL`, `SUPABASE_SECRET_KEY`
+   - `client/.env`: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`
 
-3. Configure environment variables:
+3. Run the database scripts from step 1 (Supabase setup + optional seed).
 
-   copy `.env.example` to `.env` and update values.
+4. Start backend and frontend together:
 
-4. Import database schema:
+   ```bash
+   npm run dev
+   ```
 
-   mysql -u root -p thrift_apparel < database/schema.sql
+5. Open the app:
 
-5. Seed sample products and categories:
+   - Customer storefront: <http://localhost:5173>
+   - Admin login: <http://localhost:5173/admin/login>
 
-   mysql -u root -p thrift_apparel < database/seed.sql
+---
 
-6. Create your first admin account:
+## 3. Deploying to Vercel
 
-   INSERT INTO users (name, email, password_hash, role, phone, address, created_at)
-   VALUES ('Admin User', 'admin@thriftapparel.com', '$2a$10$QwR6tJx2eWj3lVwjgslKaeSk8vE7QI4e9M3A4g4nJ5PmcA5h4J2r6', 'admin', '09171234567', 'Main Office', NOW());
+The whole app (React frontend + Express API) ships as **one Vercel project**:
+the client is built as static files, and every `/api/*` request is handled by the
+Express app running as a single serverless function (`api/index.js`).
 
-   Replace the hash with a bcrypt hash generated from your password.
+Configuration lives in `vercel.json`:
 
-7. Start backend:
-
-   npm run server
-
-8. Start frontend:
-
-   npm run client
-
-9. Open the app:
-
-   - Customer storefront: http://localhost:5173
-   - Admin login: http://localhost:5173/admin/login
-
-## Default Admin Login
-
-- Email: admin@thriftapparel.com
-- Password: use the password tied to your bcrypt hash
-
-## Important Notes
-
-- The database is the source of truth for stock.
-- Checkout validates stock and transaction safety before order creation.
-- Admin routes are protected via JWT middleware.
-
-## Deploying the storefront to Vercel
-
-The React storefront can be deployed to Vercel from the `client/` folder.
-
-1. Push this project to GitHub.
-2. In Vercel, import the repository and set **Root Directory** to `client`.
-3. Set the production environment variable `VITE_API_URL` to the public URL of the deployed API, for example `https://your-api.example.com/api`.
-4. Deploy.
-
-The API cannot use `localhost` in production. Deploy the Express server to a Node host such as Render, Railway, or Fly.io, and use a hosted MySQL database such as Railway MySQL, Aiven, or PlanetScale. Set the API variables `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET`, and `CLIENT_URL` on that host.
-
-### Gmail order notifications
-
-To email customers after checkout, enable 2-Step Verification on the Gmail account that will send messages, create a Gmail App Password, and add these values to `.env`:
-
-```env
-EMAIL_USER=your-gmail@gmail.com
-EMAIL_APP_PASSWORD=your-16-character-app-password
+```json
+{
+  "framework": null,
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": "client/dist",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index" },
+    { "source": "/:path((?!api/).*)", "destination": "/index.html" }
+  ]
+}
 ```
 
-Restart the backend after changing `.env`. Checkout still succeeds if email is not configured; the server logs that the notification was skipped.
+### Step A — push to GitHub
+
+```bash
+git add -A
+git commit -m "Migrate to Supabase and add Vercel deployment"
+git push
+```
+
+`.env`, `.env.local`, and logs are git-ignored — secrets never reach GitHub.
+
+### Step B — import the project into Vercel
+
+1. Go to <https://vercel.com/new> and import your repository.
+2. **Root Directory** → leave it at the repository root (do **not** set it to `client`).
+3. Build & Development settings are picked up from `vercel.json` automatically —
+   leave the defaults alone (Framework: Other, Build: `npm run build`,
+   Output: `client/dist`).
+
+### Step C — set the environment variables
+
+In Vercel: **Project → Settings → Environment Variables**, add for
+*Production*, *Preview*, and *Development*:
+
+| Name                               | Value                                             |
+| ---------------------------------- | ------------------------------------------------- |
+| `SUPABASE_URL`                     | `https://ygaaxvyhjiqigxeavfof.supabase.co`        |
+| `SUPABASE_SECRET_KEY`              | `sb_secret_…` (from Supabase → Project Settings)  |
+| `CLIENT_URL`                       | `https://your-app.vercel.app` (your real URL)     |
+| `VITE_SUPABASE_URL`                | `https://ygaaxvyhjiqigxeavfof.supabase.co`        |
+| `VITE_SUPABASE_PUBLISHABLE_KEY`    | `sb_publishable_…`                                |
+| `VITE_API_URL`                     | `/api`                                            |
+| `EMAIL_USER`                       | *(optional)* Gmail that sends order emails        |
+| `EMAIL_APP_PASSWORD`               | *(optional)* Gmail app password                   |
+
+> `VITE_*` variables are baked in at **build time** — re-deploy after changing them.
+> `VITE_API_URL=/api` makes the client call the API on the same domain (no CORS needed).
+
+### Step D — deploy
+
+Press **Deploy**. When it finishes, open the site and check:
+
+1. Storefront loads products: `https://your-app.vercel.app/api/health`
+2. Register + login work
+3. Admin dashboard loads (after promoting your account to admin)
+4. Uploading a product image from the dashboard works (stored in Supabase Storage)
+
+Every push to `main` now redeploys automatically.
+
+### Optional — Gmail order emails
+
+Enable 2-Step Verification on the sending Gmail account, create an
+**App Password**, and set `EMAIL_USER` + `EMAIL_APP_PASSWORD` (locally in
+`.env.local`, on Vercel in the dashboard). Checkout still succeeds if email is
+not configured — the server just logs that the notification was skipped.
+
+---
+
+## Important notes
+
+- The database is the source of truth for stock. Checkout runs the
+  `place_order()` database function, which validates stock, creates the order,
+  decreases inventory, and clears the cart in one transaction.
+- Row Level Security is enabled with no browser policies: the browser can only
+  reach the database through the Express API, which uses the secret key.
+- The secret key (`SUPABASE_SECRET_KEY`) must never be exposed to the browser.
+- Vercel functions have a request body limit of about 4.5 MB, so product images
+  should stay under ~4 MB.
+
+## Helper scripts
+
+- `scripts/promote-admin.mjs <email>` – grant the admin role to an existing account
+- `scripts/e2e-full.mjs` – end-to-end API smoke test (storefront, cart, checkout, admin)
+- `scripts/e2e-admin.mjs` – admin product CRUD + image upload/Storage cleanup test
+
+Run them with `node scripts/<name>.mjs` while the API is running locally.
+
+## Legacy files
+
+- `database/schema.sql` / `database/seed.sql` – the original MySQL versions,
+  kept for reference only. Use `database/supabase_setup.sql` and
+  `database/supabase_seed.sql` instead.

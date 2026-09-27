@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Environment / secrets — never commit these
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+server-runtime.log
+server-runtime-error.log
+
+# Build output
+client/dist/
+
+# Local product uploads (images live in Supabase Storage in production)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.DS_Store

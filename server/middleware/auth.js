@@ -1,23 +1,35 @@
-import jwt from 'jsonwebtoken';
-import db from '../config/db.js';
+import { supabase } from '../../lib/supabase.js';
 
+// Verifies the Supabase Auth access token sent by the client and loads the
+// matching profile (public.users row) so routes know who is calling.
 export const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const token = authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.split(' ')[1]
+      : null;
 
     if (!token) {
       return res.status(401).json({ message: 'Authentication required.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_key');
-    const [users] = await db.execute('SELECT id, name, email, role, phone, address FROM users WHERE id = ?', [decoded.id]);
+    const { data: { user: authUser }, error } = await supabase.auth.getUser(token);
 
-    if (!users.length) {
-      return res.status(401).json({ message: 'User not found.' });
+    if (error || !authUser) {
+      return res.status(401).json({ message: 'Invalid or expired token.' });
     }
 
-    req.user = users[0];
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('id, name, email, role, phone, address, created_at')
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    if (profileError) {
+      return res.status(401).json({ message: 'User profile not found.' });
+    }
+
+    req.user = profile;
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Invalid or expired token.' });

@@ -1,18 +1,29 @@
 import express from 'express';
-import db from '../config/db.js';
+import { supabase } from '../../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.get('/product/:productId', async (req, res) => {
   try {
-    const [rows] = await db.execute(`
-      SELECT r.id, r.rating, r.review_text, r.created_at, u.name AS customer_name
-      FROM product_reviews r
-      JOIN users u ON u.id = r.user_id
-      WHERE r.product_id = ?
-      ORDER BY r.created_at DESC
-    `, [req.params.productId]);
+    const { data, error } = await supabase
+      .from('product_reviews')
+      .select('id, rating, review_text, created_at, users(name)')
+      .eq('product_id', req.params.productId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    const rows = (data || []).map((row) => ({
+      id: row.id,
+      rating: row.rating,
+      review_text: row.review_text,
+      created_at: row.created_at,
+      customer_name: row.users?.name || 'Customer',
+    }));
+
     res.json(rows);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch reviews.', error: error.message });
@@ -28,27 +39,45 @@ router.post('/', authenticate, async (req, res) => {
   }
 
   try {
-    const [purchased] = await db.execute(`
-      SELECT oi.order_id
-      FROM order_items oi
-      JOIN orders o ON o.id = oi.order_id
-      WHERE oi.product_id = ? AND o.user_id = ? AND o.status = 'delivered'
-      ${orderId ? 'AND o.id = ?' : ''}
-      ORDER BY o.created_at DESC
-      LIMIT 1
-    `, orderId ? [productId, req.user.id, orderId] : [productId, req.user.id]);
+    // Only allow reviews for products the customer actually received.
+    let purchaseQuery = supabase
+      .from('order_items')
+      .select('order_id, orders!inner(id, user_id, status)')
+      .eq('product_id', productId)
+      .eq('orders.user_id', req.user.id)
+      .eq('orders.status', 'delivered')
+      .order('order_id', { ascending: false })
+      .limit(1);
 
-    if (!purchased.length) {
+    if (orderId) {
+      purchaseQuery = purchaseQuery.eq('orders.id', orderId);
+    }
+
+    const { data: purchased, error: purchaseError } = await purchaseQuery;
+
+    if (purchaseError) {
+      throw purchaseError;
+    }
+
+    if (!purchased || !purchased.length) {
       return res.status(403).json({ message: 'You can review products you purchased.' });
     }
 
-    await db.execute(
-      'INSERT INTO product_reviews (product_id, user_id, order_id, rating, review_text) VALUES (?, ?, ?, ?, ?)',
-      [productId, req.user.id, purchased[0].order_id, numericRating, reviewText?.trim() || null]
-    );
+    const { error } = await supabase.from('product_reviews').insert({
+      product_id: productId,
+      user_id: req.user.id,
+      order_id: purchased[0].order_id,
+      rating: numericRating,
+      review_text: reviewText?.trim() || null,
+    });
+
+    if (error) {
+      throw error;
+    }
+
     res.status(201).json({ message: 'Review submitted.' });
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (error.code === '23505') {
       return res.status(409).json({ message: 'You already reviewed this product from that order.' });
     }
     res.status(500).json({ message: 'Failed to submit review.', error: error.message });

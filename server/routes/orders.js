@@ -1,5 +1,5 @@
 import express from 'express';
-import db from '../config/db.js';
+import { supabase } from '../../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
 import { sendOrderConfirmation } from '../services/email.js';
 
@@ -8,99 +8,115 @@ router.use(authenticate);
 
 router.get('/my-orders', async (req, res) => {
   try {
-    const [orders] = await db.execute('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC', [req.user.id]);
-    for (const order of orders) {
-      const [items] = await db.execute(`
-        SELECT oi.product_id, oi.quantity, oi.price, p.name, p.image_url,
-          r.id AS review_id, r.rating AS review_rating, r.review_text
-        FROM order_items oi
-        JOIN products p ON p.id = oi.product_id
-        LEFT JOIN product_reviews r ON r.order_id = oi.order_id AND r.product_id = oi.product_id AND r.user_id = ?
-        WHERE oi.order_id = ?
-      `, [req.user.id, order.id]);
-      order.items = items;
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
     }
-    res.json(orders);
+
+    if (!orders || !orders.length) {
+      return res.json([]);
+    }
+
+    const orderIds = orders.map((order) => order.id);
+
+    const [{ data: orderItems, error: itemsError }, { data: myReviews, error: reviewsError }] =
+      await Promise.all([
+        supabase
+          .from('order_items')
+          .select('order_id, product_id, quantity, price, products(name, image_url)')
+          .in('order_id', orderIds),
+        supabase
+          .from('product_reviews')
+          .select('id, order_id, product_id, rating, review_text')
+          .eq('user_id', req.user.id)
+          .in('order_id', orderIds),
+      ]);
+
+    if (itemsError) throw itemsError;
+    if (reviewsError) throw reviewsError;
+
+    const reviewKey = (review) => `${review.order_id}:${review.product_id}`;
+
+    const reviewsByItem = new Map((myReviews || []).map((review) => [reviewKey(review), review]));
+
+    const itemsByOrder = new Map();
+    for (const item of orderItems || []) {
+      const review = reviewsByItem.get(reviewKey(item));
+      const shaped = {
+        product_id: item.product_id,
+        quantity: item.quantity,
+        price: item.price,
+        name: item.products?.name || null,
+        image_url: item.products?.image_url || null,
+        review_id: review?.id || null,
+        review_rating: review?.rating || null,
+        review_text: review?.review_text || null,
+      };
+
+      if (!itemsByOrder.has(item.order_id)) {
+        itemsByOrder.set(item.order_id, []);
+      }
+      itemsByOrder.get(item.order_id).push(shaped);
+    }
+
+    const shapedOrders = orders.map((order) => ({
+      ...order,
+      items: itemsByOrder.get(order.id) || [],
+    }));
+
+    res.json(shapedOrders);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch orders.', error: error.message });
   }
 });
 
 router.post('/checkout', async (req, res) => {
-  const { items, shippingAddress, phone } = req.body;
+  const { shippingAddress, phone } = req.body;
 
-  if (!items || !items.length) {
-    return res.status(400).json({ message: 'Your cart is empty.' });
-  }
-
-  if (!shippingAddress || !shippingAddress.trim()) {
+  if (!shippingAddress || !String(shippingAddress).trim()) {
     return res.status(400).json({ message: 'Shipping address is required.' });
   }
 
-  const connection = await db.getConnection();
-
   try {
-    await connection.beginTransaction();
+    // place_order() is a database function that validates stock, creates the
+    // order, decreases inventory and clears the cart atomically.
+    const { data: order, error } = await supabase.rpc('place_order', {
+      p_user_id: req.user.id,
+      p_shipping_address: shippingAddress,
+      p_phone: phone || req.user.phone || '',
+    });
 
-    const [cartRows] = await connection.execute('SELECT id FROM carts WHERE user_id = ?', [req.user.id]);
-    if (!cartRows.length) {
-      await connection.rollback();
-      return res.status(400).json({ message: 'No cart found.' });
+    if (error) {
+      return res.status(400).json({ message: cleanCheckoutError(error.message) });
     }
 
-    const cartId = cartRows[0].id;
-    const [cartItems] = await connection.execute('SELECT ci.id, ci.product_id, ci.quantity, p.stock_quantity, p.price, p.name FROM cart_items ci JOIN products p ON p.id = ci.product_id WHERE ci.cart_id = ?', [cartId]);
-
-    if (!cartItems.length) {
-      await connection.rollback();
-      return res.status(400).json({ message: 'Cart is empty.' });
-    }
-
-    for (const item of cartItems) {
-      if (item.stock_quantity < item.quantity) {
-        await connection.rollback();
-        return res.status(400).json({ message: `Insufficient stock for ${item.name}.` });
-      }
-    }
-
-    const totalAmount = cartItems.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0);
-    const orderNumber = `THR-${Date.now()}`;
-
-    const [orderResult] = await connection.execute(
-      'INSERT INTO orders (user_id, order_number, total_amount, shipping_address, phone, status) VALUES (?, ?, ?, ?, ?, ?)',
-      [req.user.id, orderNumber, totalAmount, shippingAddress, phone || req.user.phone || '', 'pending']
-    );
-
-    const orderId = orderResult.insertId;
-
-    for (const item of cartItems) {
-      await connection.execute(
-        'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)',
-        [orderId, item.product_id, item.quantity, item.price]
-      );
-
-      await connection.execute(
-        'UPDATE products SET stock_quantity = stock_quantity - ?, status = CASE WHEN stock_quantity - ? <= 0 THEN "sold_out" ELSE "active" END WHERE id = ?',
-        [item.quantity, item.quantity, item.product_id]
-      );
-    }
-
-    await connection.execute('DELETE FROM cart_items WHERE cart_id = ?', [cartId]);
-    await connection.commit();
-
-    const [createdOrder] = await db.execute('SELECT * FROM orders WHERE id = ?', [orderId]);
     try {
-      await sendOrderConfirmation({ recipient: req.user.email, customerName: req.user.name, order: createdOrder[0] });
+      await sendOrderConfirmation({
+        recipient: req.user.email,
+        customerName: req.user.name,
+        order,
+      });
     } catch (emailError) {
       console.error('Order email failed:', emailError.message);
     }
-    res.status(201).json({ message: 'Order placed successfully.', order: createdOrder[0] });
+
+    res.status(201).json({ message: 'Order placed successfully.', order });
   } catch (error) {
-    await connection.rollback();
     res.status(500).json({ message: 'Checkout failed.', error: error.message });
-  } finally {
-    connection.release();
   }
 });
+
+const cleanCheckoutError = (message = 'Checkout failed.') => {
+  if (/cart is empty/i.test(message)) return 'Cart is empty.';
+  if (/no cart found/i.test(message)) return 'Your cart is empty.';
+  if (/shipping address/i.test(message)) return 'Shipping address is required.';
+  if (/insufficient stock/i.test(message)) return message.replace(/^.*?(Insufficient stock)/i, '$1');
+  return message;
+};
 
 export default router;

@@ -1,12 +1,20 @@
 import express from 'express';
-import db from '../config/db.js';
+import { supabase } from '../../lib/supabase.js';
 
 const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await db.execute('SELECT * FROM categories ORDER BY name ASC');
-    res.json(rows);
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    res.json(data);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch categories.', error: error.message });
   }

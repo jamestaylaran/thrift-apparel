@@ -1,104 +1,180 @@
-import express from 'express';
-import db from '../config/db.js';
+import express from "express";
+import { supabase } from "../../lib/supabase.js";
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+// GET all products
+router.get("/", async (req, res) => {
   try {
-    const { category, size, brand, color, condition, q, sort, minPrice, maxPrice } = req.query;
-    let query = `
-      SELECT p.*, c.name as category_name,
-      CASE
-        WHEN p.stock_quantity > 5 THEN 'In Stock'
-        WHEN p.stock_quantity > 0 THEN 'Low Stock'
-        ELSE 'Out of Stock'
-      END AS stock_status
-      FROM products p
-      JOIN categories c ON c.id = p.category_id
-      WHERE p.status != 'archived' AND p.stock_quantity > 0
-    `;
-    const params = [];
+    const {
+      category,
+      size,
+      brand,
+      color,
+      condition,
+      q,
+      sort,
+      minPrice,
+      maxPrice,
+    } = req.query;
 
+    // `!inner` makes PostgREST drop products whose category does not match
+    // the filter below (mirrors the old SQL JOIN + WHERE behaviour).
+    const selectClause = category
+      ? `*, categories!inner(name)`
+      : `*, categories(name)`;
+
+    let query = supabase
+      .from("products")
+      .select(selectClause)
+      .neq("status", "archived")
+      .gt("stock_quantity", 0);
+
+    // Filters
     if (category) {
-      query += ' AND c.name = ?';
-      params.push(category);
+      query = query.eq("categories.name", category);
     }
+
     if (size) {
-      query += ' AND p.size = ?';
-      params.push(size);
+      query = query.eq("size", size);
     }
+
     if (brand) {
-      query += ' AND p.brand = ?';
-      params.push(brand);
+      query = query.eq("brand", brand);
     }
+
     if (color) {
-      query += ' AND p.color = ?';
-      params.push(color);
+      query = query.eq("color", color);
     }
+
     if (condition) {
-      query += ' AND p.condition_name = ?';
-      params.push(condition);
+      query = query.eq("condition_name", condition);
     }
+
     if (minPrice) {
-      query += ' AND p.price >= ?';
-      params.push(Number(minPrice));
+      query = query.gte("price", Number(minPrice));
     }
+
     if (maxPrice) {
-      query += ' AND p.price <= ?';
-      params.push(Number(maxPrice));
+      query = query.lte("price", Number(maxPrice));
     }
+
     if (q) {
-      query += ' AND (p.name LIKE ? OR p.description LIKE ? OR p.brand LIKE ?)';
-      const search = `%${q}%`;
-      params.push(search, search, search);
+      query = query.or(
+        `name.ilike.%${q}%,description.ilike.%${q}%,brand.ilike.%${q}%`,
+      );
     }
 
-    if (sort === 'price_asc') {
-      query += ' ORDER BY p.price ASC';
-    } else if (sort === 'price_desc') {
-      query += ' ORDER BY p.price DESC';
+    // Sorting
+    if (sort === "price_asc") {
+      query = query.order("price", { ascending: true });
+    } else if (sort === "price_desc") {
+      query = query.order("price", { ascending: false });
     } else {
-      query += ' ORDER BY p.created_at DESC';
+      query = query.order("created_at", { ascending: false });
     }
 
-    const [rows] = await db.execute(query, params);
-    res.json(rows);
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    const products = data.map((product) => ({
+      ...product,
+      category_name: product.categories?.name || null,
+      stock_status:
+        product.stock_quantity > 5
+          ? "In Stock"
+          : product.stock_quantity > 0
+            ? "Low Stock"
+            : "Out of Stock",
+    }));
+
+    res.json(products);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch products.', error: error.message });
+    console.error("Products error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch products.",
+      error: error.message,
+    });
   }
 });
 
-router.get('/featured', async (req, res) => {
+// GET featured products
+router.get("/featured", async (req, res) => {
   try {
-    const [rows] = await db.execute('SELECT * FROM products WHERE status != "archived" AND stock_quantity > 0 ORDER BY (id = 16) DESC, created_at DESC LIMIT 8');
-    res.json(rows);
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .neq("status", "archived")
+      .gt("stock_quantity", 0)
+      .order("created_at", { ascending: false })
+      .limit(8);
+
+    if (error) {
+      throw error;
+    }
+
+    res.json(data);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch featured products.', error: error.message });
+    console.error("Featured products error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch featured products.",
+      error: error.message,
+    });
   }
 });
 
-router.get('/:id', async (req, res) => {
-  const { id } = req.params;
+// GET single product
+router.get("/:id", async (req, res) => {
   try {
-    const [rows] = await db.execute(`
-      SELECT p.*, c.name as category_name,
-      CASE
-        WHEN p.stock_quantity > 5 THEN 'In Stock'
-        WHEN p.stock_quantity > 0 THEN 'Low Stock'
-        ELSE 'Out of Stock'
-      END AS stock_status
-      FROM products p
-      JOIN categories c ON c.id = p.category_id
-      WHERE p.id = ?
-    `, [id]);
+    const { id } = req.params;
 
-    if (!rows.length) {
-      return res.status(404).json({ message: 'Product not found.' });
+    const { data, error } = await supabase
+      .from("products")
+      .select(
+        `
+        *,
+        categories (
+          name
+        )
+      `,
+      )
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return res.status(404).json({
+          message: "Product not found.",
+        });
+      }
+
+      throw error;
     }
 
-    return res.json(rows[0]);
+    const product = {
+      ...data,
+      category_name: data.categories?.name || null,
+      stock_status:
+        data.stock_quantity > 5
+          ? "In Stock"
+          : data.stock_quantity > 0
+            ? "Low Stock"
+            : "Out of Stock",
+    };
+
+    res.json(product);
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to fetch product.', error: error.message });
+    console.error("Product error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch product.",
+      error: error.message,
+    });
   }
 });
 
