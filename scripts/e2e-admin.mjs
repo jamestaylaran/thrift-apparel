@@ -1,5 +1,5 @@
 // E2E test: admin product create (multipart image upload), update, order status, delete
-const B = "http://localhost:5000/api";
+const B = process.env.API_BASE || "http://localhost:5000/api";
 const SUPA = "https://ygaaxvyhjiqigxeavfof.supabase.co";
 const PKEY = "sb_publishable_UwAbktHxDioIijYnkLdGRA_5rACGD8j";
 

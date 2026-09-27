@@ -95,11 +95,30 @@ router.post('/checkout', async (req, res) => {
       return res.status(400).json({ message: cleanCheckoutError(error.message) });
     }
 
+    // Load the purchased lines so the receipt email can be itemised.
+    let items = [];
+    try {
+      const { data: orderItems } = await supabase
+        .from('order_items')
+        .select('quantity, price, products(name, sku)')
+        .eq('order_id', order.id);
+
+      items = (orderItems || []).map((row) => ({
+        name: row.products?.name || 'Item',
+        sku: row.products?.sku || '',
+        quantity: row.quantity,
+        price: row.price,
+      }));
+    } catch (itemsError) {
+      console.error('Could not load order items for receipt:', itemsError.message);
+    }
+
     try {
       await sendOrderConfirmation({
         recipient: req.user.email,
         customerName: req.user.name,
         order,
+        items,
       });
     } catch (emailError) {
       console.error('Order email failed:', emailError.message);
