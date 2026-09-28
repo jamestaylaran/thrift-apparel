@@ -2404,7 +2404,7 @@ html {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(243, 240, 234, 0.88);
+  background: rgba(243, 240, 234, 0.94);
   backdrop-filter: blur(16px) saturate(1.3);
   -webkit-backdrop-filter: blur(16px) saturate(1.3);
   border-bottom: 1px solid rgba(23, 23, 23, 0.08);
@@ -2887,5 +2887,205 @@ textarea:focus {
 
   .main-nav.open a {
     font-size: 15px;
+  }
+}
+
+/* ============================================================
+   Mobile fixes (≤640px) — audited with phone-size screenshots
+   ============================================================ */
+
+/* Buttons always sit at the bottom of each product card so rows align. */
+.product-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.product-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.card-actions {
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+@media (max-width: 640px) {
+  /* One compact header row: ☰ | logo | cart + account */
+  .nav-wrap {
+    flex-wrap: nowrap;
+    gap: 10px;
+    min-height: 62px;
+  }
+
+  .nav-actions {
+    gap: 12px;
+    justify-content: flex-end;
+    margin-left: auto;
+    width: auto;
+  }
+
+  .nav-actions .icon-link[aria-label='Search'],
+  .nav-actions .icon-link[aria-label='Wishlist'] {
+    display: none;
+  }
+
+  .nav-button {
+    font-size: 13px;
+    padding: 10px 16px;
+  }
+
+  .mobile-menu {
+    font-size: 22px;
+    padding: 10px 6px;
+  }
+
+  /* Hero: text stays inside the gutters and reads over a darker overlay */
+  .hero-grid > div:first-child {
+    left: 0;
+    right: 0;
+    padding: 0 20px;
+  }
+
+  .hero-grid h1 {
+    font-size: clamp(2.6rem, 13vw, 4rem);
+  }
+
+  .hero-grid > div:first-child .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+  }
+
+  .hero-grid > div:first-child .lead {
+    font-size: 15px;
+    max-width: 330px;
+  }
+
+  .hero-notes {
+    flex-wrap: wrap;
+    font-size: 12px;
+    gap: 6px 14px;
+    max-width: none;
+  }
+
+  .hero-visual {
+    height: max(520px, calc(100vh - 96px));
+  }
+
+  .hero-visual::before {
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.74), rgba(0, 0, 0, 0.5));
+  }
+
+  /* Product cards: heart floats over the photo, CTA gets the full width
+     (a nowrap "ADD TO CART" label cannot fit next to a heart button). */
+  .product-card {
+    position: relative;
+  }
+
+  .product-body {
+    padding: 14px 14px 18px;
+  }
+
+  .card-actions {
+    gap: 8px;
+  }
+
+  .card-actions .primary-btn {
+    font-size: 12px;
+    padding: 13px 8px;
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  .card-actions .ghost-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 3;
+    background: rgba(243, 240, 234, 0.94);
+    border: 1px solid rgba(23, 23, 23, 0.14);
+    border-radius: 999px;
+    color: var(--ink);
+    display: grid;
+    font-size: 16px;
+    height: 38px;
+    line-height: 1;
+    padding: 0;
+    place-items: center;
+    width: 38px;
+  }
+
+  /* Product detail: photo stays under one screenful */
+  .detail-gallery img {
+    border-radius: 18px;
+    height: 440px;
+  }
+
+  /* Campaign headline inside the gutters */
+  .campaign-copy {
+    left: 20px;
+    right: 20px;
+  }
+
+  .campaign-copy h2 {
+    font-size: clamp(2.4rem, 12vw, 4.5rem);
+  }
+
+  /* Cart rows: photo on the left, details stacked on the right */
+  .cart-item {
+    align-items: start;
+    gap: 6px 14px;
+    grid-template-columns: 84px 1fr;
+  }
+
+  .cart-item img {
+    align-self: start;
+    grid-column: 1;
+    grid-row: 1 / span 4;
+    height: 116px;
+    object-fit: cover;
+    width: 84px;
+  }
+
+  .cart-item > div,
+  .cart-item > span,
+  .cart-item > button {
+    grid-column: 2;
+  }
+
+  .cart-item > button {
+    justify-self: start;
+    font-size: 13px;
+    margin-top: 4px;
+    padding: 9px 16px;
+  }
+
+  /* Admin/order tables scroll horizontally instead of squashing */
+  .table-wrap table {
+    min-width: 620px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Footer breathing room */
+  .footer-grid {
+    gap: 30px 18px;
+  }
+
+  .footer-grid h3,
+  .footer-grid h4 {
+    font-size: 15px;
+  }
+
+  /* Tighter vertical rhythm */
+  .section-block {
+    padding-top: 64px;
+  }
+
+  .page-shell {
+    padding: 52px 0 72px;
   }
 }
