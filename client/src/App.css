@@ -2031,12 +2031,20 @@ body {
   background: linear-gradient(90deg, rgba(0, 0, 0, 0.66), rgba(0, 0, 0, 0.05) 72%);
   content: '';
   inset: 0;
+  pointer-events: none;
   position: absolute;
   z-index: 1;
 }
 
-.hero-visual:hover img {
-  transform: scale(1.025);
+/* Only the photo under the cursor zooms — each cell clips its own image. */
+.hero-cell {
+  height: 100%;
+  overflow: hidden;
+}
+
+.hero-cell:hover img {
+  filter: saturate(1.06) contrast(1.02);
+  transform: scale(1.09);
 }
 
 .section-block {

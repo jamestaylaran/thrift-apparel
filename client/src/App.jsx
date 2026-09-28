@@ -262,9 +262,9 @@ function HomePage({ token }) {
           </div>
           <div className="hero-visual">
             <div className="hero-collage">
-              <img src="https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&w=900&q=85" alt="Retro streetwear outfit" />
-              <img src="https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=900&q=85" alt="Streetwear model wearing a retro outfit" />
-              <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=85" alt="Vintage fashion model" />
+              <div className="hero-cell"><img src="https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&w=900&q=85" alt="Retro streetwear outfit" /></div>
+              <div className="hero-cell"><img src="https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=900&q=85" alt="Streetwear model wearing a retro outfit" /></div>
+              <div className="hero-cell"><img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=85" alt="Vintage fashion model" /></div>
             </div>
           </div>
         </div>
