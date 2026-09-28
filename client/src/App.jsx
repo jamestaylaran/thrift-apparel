@@ -113,6 +113,7 @@ function App() {
 function AppLayout({ token, user, logout, onAuth }) {
   const [cartCount, setCartCount] = useState(0);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const isAdmin = user?.role === 'admin';
   const isAdminArea = isAdmin || location.pathname.startsWith('/admin');
@@ -143,13 +144,22 @@ function AppLayout({ token, user, logout, onAuth }) {
       <div className="announcement-bar" aria-label="Store announcement"><div className="announcement-track"><span>SHOP SECOND-HAND SEPTEMBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND SEPTEMBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND SEPTEMBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND SEPTEMBER SALE - 30-50% OFF EVERYTHING!</span></div></div>
       <header className="site-header">
         <div className="container nav-wrap">
-          <button className="mobile-menu" type="button" aria-label="Open menu">☰</button>
+          <button
+            className={`mobile-menu${mobileMenuOpen ? ' open' : ''}`}
+            type="button"
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="main-menu"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
           <Link to="/" className="brand"><span className="brand-name">THRIFT APPAREL</span></Link>
-          <nav className="main-nav">
+          <nav className={`main-nav${mobileMenuOpen ? ' open' : ''}`} id="main-menu">
             {isAdminArea ? (
-              <><a href="/admin#dashboard" onClick={(event) => scrollToAdminSection(event, 'dashboard')}>Dashboard</a><a href="/admin#inventory" onClick={(event) => scrollToAdminSection(event, 'inventory')}>Inventory</a><a href="/admin#orders" onClick={(event) => scrollToAdminSection(event, 'orders')}>Orders</a></>
+              <><a href="/admin#dashboard" onClick={(event) => { scrollToAdminSection(event, 'dashboard'); setMobileMenuOpen(false); }}>Dashboard</a><a href="/admin#inventory" onClick={(event) => { scrollToAdminSection(event, 'inventory'); setMobileMenuOpen(false); }}>Inventory</a><a href="/admin#orders" onClick={(event) => { scrollToAdminSection(event, 'orders'); setMobileMenuOpen(false); }}>Orders</a></>
             ) : (
-              <><NavLink to="/shop">New In</NavLink><NavLink to="/orders">My Order</NavLink><NavLink to="/categories">Shop All</NavLink><NavLink to="/about">Our Story</NavLink><NavLink to="/returns">Returns</NavLink></>
+              <><NavLink to="/shop" onClick={() => setMobileMenuOpen(false)}>New In</NavLink><NavLink to="/orders" onClick={() => setMobileMenuOpen(false)}>My Order</NavLink><NavLink to="/categories" onClick={() => setMobileMenuOpen(false)}>Shop All</NavLink><NavLink to="/about" onClick={() => setMobileMenuOpen(false)}>Our Story</NavLink><NavLink to="/returns" onClick={() => setMobileMenuOpen(false)}>Returns</NavLink></>
             )}
           </nav>
 
@@ -159,8 +169,8 @@ function AppLayout({ token, user, logout, onAuth }) {
               <div className="user-menu">
                 <button className="user-menu-trigger" type="button" onClick={() => setUserMenuOpen((open) => !open)} aria-expanded={userMenuOpen}>Hi, {user.name}</button>
                 <div className={`dropdown${userMenuOpen ? ' open' : ''}`}>
-                  {!isAdmin && <><Link to="/orders">My Orders</Link><Link to="/wishlist">Wishlist</Link></>}
-                  {isAdmin && <Link to="/admin">Admin Dashboard</Link>}
+                  {!isAdmin && <><Link to="/orders" onClick={() => setUserMenuOpen(false)}>My Orders</Link><Link to="/wishlist" onClick={() => setUserMenuOpen(false)}>Wishlist</Link></>}
+                  {isAdmin && <Link to="/admin" onClick={() => setUserMenuOpen(false)}>Admin Dashboard</Link>}
                   <button type="button" onClick={logout}>Logout</button>
                 </div>
               </div>
