@@ -2164,9 +2164,30 @@ body {
 }
 
 .card-actions .ghost-btn {
+  align-items: center;
+  display: inline-flex;
   font-size: 19px;
+  justify-content: center;
   line-height: 1;
   padding: 8px 11px;
+}
+
+/* Wishlist heart and cart symbol are matching squares; the action button
+   takes the rest of the row between them. */
+.card-actions .wishlist-btn,
+.card-actions .cart-add-btn {
+  flex: 0 0 44px;
+  padding: 8px 0;
+}
+
+.cart-symbol {
+  fill: none;
+  height: 17px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  width: 17px;
 }
 
 .card-actions .primary-btn {
@@ -3010,8 +3031,8 @@ textarea:focus {
     transform: none;
   }
 
-  /* Product cards: heart floats over the photo, CTA gets the full width
-     (a nowrap "ADD TO CART" label cannot fit next to a heart button). */
+  /* Product cards: heart floats over the photo, cart symbol + BUY NOW
+     share the action row beneath it. */
   .product-card {
     position: relative;
   }
@@ -3028,10 +3049,10 @@ textarea:focus {
     font-size: 12px;
     padding: 13px 8px;
     white-space: nowrap;
-    width: 100%;
   }
 
-  .card-actions .ghost-btn {
+  /* Heart floats over the photo; cart symbol + BUY NOW share the row. */
+  .card-actions .wishlist-btn {
     position: absolute;
     top: 10px;
     right: 10px;

@@ -482,6 +482,22 @@ function ProductCard({ product, token, featured = false }) {
     }
   };
 
+  const buyNow = async () => {
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+    try {
+      await apiFetch('/cart/buy-now', {
+        method: 'POST',
+        body: JSON.stringify({ productId: product.id, quantity: 1 }),
+      }, token);
+      navigate('/checkout');
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
   return (
     <article className="product-card">
       <div className="product-image-wrap" onClick={() => navigate(`/product/${product.id}`)}>
@@ -497,8 +513,15 @@ function ProductCard({ product, token, featured = false }) {
         <p>Size: {product.size}</p>
         <p>{product.stock_quantity > 0 ? `${product.stock_quantity} left` : 'Out of stock'}</p>
         <div className="card-actions">
-          <button type="button" className="ghost-btn" onClick={addToWishlist}>♡</button>
-          <button type="button" className="primary-btn small" onClick={addToCart}>ADD TO CART</button>
+          <button type="button" className="ghost-btn wishlist-btn" onClick={addToWishlist} aria-label="Add to wishlist" title="Add to wishlist">♡</button>
+          <button type="button" className="ghost-btn cart-add-btn" onClick={addToCart} aria-label="Add to cart" title="Add to cart">
+            <svg className="cart-symbol" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="9" cy="20" r="1.4" />
+              <circle cx="17.5" cy="20" r="1.4" />
+              <path d="M2.5 4h2.6l2.3 10.4a1.7 1.7 0 0 0 1.7 1.3h7.2a1.7 1.7 0 0 0 1.6-1.2L20.5 8H6.2" />
+            </svg>
+          </button>
+          <button type="button" className="primary-btn small" onClick={buyNow}>BUY NOW</button>
         </div>
         {message && <small>{message}</small>}
       </div>
