@@ -1,6 +1,6 @@
 import express from 'express';
 import { supabase } from '../../lib/supabase.js';
-import { hasBestPickColumn, parseBestPick } from '../../lib/best-pick.js';
+import { parseBestPick, withBestPick, clearOtherBestPicks } from '../../lib/best-pick.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import multer from 'multer';
 
@@ -205,7 +205,7 @@ router.post('/products', upload.single('image'), async (req, res) => {
       return res.status(400).json({ message: 'SKU, name, price and category are required.' });
     }
 
-    const markAsBestPick = parseBestPick(is_best_pick) && (await hasBestPickColumn());
+    const markAsBestPick = parseBestPick(is_best_pick);
 
     const imagePath = req.file
       ? await uploadImageToStorage(req.file)
@@ -225,9 +225,8 @@ router.post('/products', upload.single('image'), async (req, res) => {
         material: material || null,
         condition_name: condition_name || null,
         stock_quantity: Number(stock_quantity) || 0,
-        measurements: parseMeasurements(measurements),
+        measurements: withBestPick(parseMeasurements(measurements), markAsBestPick),
         image_url: imagePath,
-        ...(markAsBestPick ? { is_best_pick: true } : {}),
       })
       .select('id')
       .single();
@@ -245,11 +244,7 @@ router.post('/products', upload.single('image'), async (req, res) => {
 
     if (markAsBestPick) {
       // Only one product can wear the badge at a time.
-      await supabase
-        .from('products')
-        .update({ is_best_pick: false })
-        .neq('id', data.id)
-        .eq('is_best_pick', true);
+      await clearOtherBestPicks(data.id);
     }
 
     res.status(201).json({ id: data.id, message: 'Product added.' });
@@ -280,9 +275,9 @@ router.patch('/products/:id', upload.single('image'), async (req, res) => {
       ? await uploadImageToStorage(req.file)
       : image_url || previousImage;
 
-    // The flag is only written when the one-time column migration is in
-    // place; otherwise the rest of the save proceeds untouched.
-    const applyBestPick = is_best_pick !== undefined && (await hasBestPickColumn());
+    // The flag rides inside the measurements JSON so no schema change is
+    // ever required.
+    const applyBestPick = is_best_pick !== undefined;
     const markAsBestPick = applyBestPick && parseBestPick(is_best_pick);
 
     const { error } = await supabase
@@ -304,10 +299,12 @@ router.patch('/products/:id', upload.single('image'), async (req, res) => {
           stock_quantity != null && stock_quantity !== ''
             ? Number(stock_quantity)
             : existingRows.stock_quantity,
-        measurements:
-          measurements !== undefined ? parseMeasurements(measurements) : existingRows.measurements,
+        measurements: applyBestPick
+          ? withBestPick(existingRows.measurements, markAsBestPick)
+          : measurements !== undefined
+            ? parseMeasurements(measurements)
+            : existingRows.measurements,
         image_url: imagePath,
-        ...(applyBestPick ? { is_best_pick: markAsBestPick } : {}),
       })
       .eq('id', req.params.id);
 
@@ -317,11 +314,7 @@ router.patch('/products/:id', upload.single('image'), async (req, res) => {
 
     if (markAsBestPick) {
       // Only one product can wear the badge at a time.
-      await supabase
-        .from('products')
-        .update({ is_best_pick: false })
-        .neq('id', req.params.id)
-        .eq('is_best_pick', true);
+      await clearOtherBestPicks(req.params.id);
     }
 
     if (req.file && previousImage && previousImage !== imagePath) {

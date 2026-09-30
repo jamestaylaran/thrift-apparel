@@ -1,6 +1,6 @@
 import express from "express";
 import { supabase } from "../../lib/supabase.js";
-import { hasBestPickColumn, parseBestPick } from "../../lib/best-pick.js";
+import { isBestPick } from "../../lib/best-pick.js";
 
 const router = express.Router();
 
@@ -106,27 +106,25 @@ router.get("/", async (req, res) => {
 // GET featured products
 router.get("/featured", async (req, res) => {
   try {
-    let query = supabase
+    const { data, error } = await supabase
       .from("products")
       .select("*")
       .neq("status", "archived")
-      .gt("stock_quantity", 0);
-
-    // The admin's chosen Best Pick always surfaces first in every section
-    // that renders this list.
-    if (await hasBestPickColumn()) {
-      query = query.order("is_best_pick", { ascending: false });
-    }
-
-    const { data, error } = await query
-      .order("created_at", { ascending: false })
-      .limit(8);
+      .gt("stock_quantity", 0)
+      .order("created_at", { ascending: false });
 
     if (error) {
       throw error;
     }
 
-    res.json(data);
+    // The admin's chosen Best Pick always surfaces first in every section
+    // that renders this list (stable sort keeps the newest-first order for
+    // everything else).
+    const featured = [...(data || [])]
+      .sort((a, b) => Number(isBestPick(b.measurements)) - Number(isBestPick(a.measurements)))
+      .slice(0, 8);
+
+    res.json(featured);
   } catch (error) {
     console.error("Featured products error:", error);
 

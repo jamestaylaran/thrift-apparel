@@ -248,7 +248,7 @@ function HomePage({ token }) {
       .catch(() => setFeatured([]));
   }, []);
 
-  const hasBestPick = featured.some((product) => product.is_best_pick);
+  const hasBestPick = featured.some((product) => product.measurements?.best_pick);
 
   return (
     <>
@@ -285,7 +285,7 @@ function HomePage({ token }) {
         </div>
         <div className="product-grid product-rail">
           {featured.length ? featured.slice(0, 4).map((product, index) => (
-            <ProductCard key={product.id} product={product} token={token} featured={product.is_best_pick || (!hasBestPick && index === 0)} />
+            <ProductCard key={product.id} product={product} token={token} featured={product.measurements?.best_pick || (!hasBestPick && index === 0)} />
           )) : <p>No products available.</p>}
         </div>
       </section>
@@ -1002,7 +1002,7 @@ function AdminDashboard({ token }) {
       category_id: product.category_id || '', brand: product.brand || '', size: product.size || '', color: product.color || '',
       material: product.material || '', condition_name: product.condition_name || 'Excellent', stock_quantity: product.stock_quantity ?? 0,
       image_url: product.image_url || '',
-      is_best_pick: !!product.is_best_pick,
+      is_best_pick: Boolean(product.measurements?.best_pick),
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1086,9 +1086,6 @@ function AdminDashboard({ token }) {
             <input type="checkbox" name="is_best_pick" checked={productForm.is_best_pick} onChange={updateProductField} />
             <span>Best pick — show the homepage badge on this product</span>
           </label>
-          {inventory.length > 0 && !('is_best_pick' in inventory[0]) && (
-            <small className="form-message">Not active yet: the one-time Best Pick database update still needs to be run in Supabase.</small>
-          )}
           <button className="primary-btn" type="submit">{editingProductId ? 'SAVE CHANGES' : 'ADD PRODUCT'}</button>
           {editingProductId && <button className="ghost-btn" type="button" onClick={cancelEdit}>CANCEL</button>}
           {productMessage && <small className="form-message">{productMessage}</small>}
@@ -1120,7 +1117,7 @@ function AdminDashboard({ token }) {
           <thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Status</th><th>Restock</th><th>Action</th></tr></thead>
           <tbody>
             {inventory.map((item) => (
-              <tr key={item.id}><td>{item.name}{item.is_best_pick ? <span className="best-pick-chip">★ BEST PICK</span> : null}</td><td>{item.sku}</td><td>{item.stock_quantity}</td><td>{item.inventory_status || 'In Stock'}</td><td><div className="restock-control"><input type="number" min="1" placeholder="Qty" value={restockValues[item.id] || ''} onChange={(event) => setRestockValues((current) => ({ ...current, [item.id]: event.target.value }))} /><button className="table-action" type="button" onClick={() => restockProduct(item.id)}>RESTOCK</button></div></td><td><button className="table-action" type="button" onClick={() => editProduct(item)}>EDIT</button></td></tr>
+              <tr key={item.id}><td>{item.name}{item.measurements?.best_pick ? <span className="best-pick-chip">★ BEST PICK</span> : null}</td><td>{item.sku}</td><td>{item.stock_quantity}</td><td>{item.inventory_status || 'In Stock'}</td><td><div className="restock-control"><input type="number" min="1" placeholder="Qty" value={restockValues[item.id] || ''} onChange={(event) => setRestockValues((current) => ({ ...current, [item.id]: event.target.value }))} /><button className="table-action" type="button" onClick={() => restockProduct(item.id)}>RESTOCK</button></div></td><td><button className="table-action" type="button" onClick={() => editProduct(item)}>EDIT</button></td></tr>
             ))}
           </tbody>
         </table>
