@@ -84,9 +84,14 @@ create table public.products (
   status          text not null default 'active' check (status in ('active', 'sold_out', 'archived')),
   measurements    jsonb not null default '{}'::jsonb,
   image_url       text,
+  is_best_pick    boolean not null default false,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
+
+-- Migration for databases created before Best Pick existed:
+-- alter table public.products
+--   add column if not exists is_best_pick boolean not null default false;
 
 create table public.product_images (
   id          bigint generated always as identity primary key,

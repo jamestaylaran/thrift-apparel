@@ -3156,3 +3156,36 @@ textarea:focus {
     opacity: 1;
   }
 }
+
+/* Admin: choose which product wears the BEST PICK badge. */
+.best-pick-toggle {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  user-select: none;
+}
+
+.best-pick-toggle input {
+  accent-color: var(--lime);
+  flex: 0 0 auto;
+  height: 18px;
+  width: 18px;
+}
+
+.best-pick-toggle span {
+  font-size: 14px;
+}
+
+.best-pick-chip {
+  background: var(--lime);
+  border-radius: 999px;
+  color: var(--ink);
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-left: 8px;
+  padding: 4px 8px;
+  vertical-align: middle;
+}

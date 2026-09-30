@@ -248,6 +248,8 @@ function HomePage({ token }) {
       .catch(() => setFeatured([]));
   }, []);
 
+  const hasBestPick = featured.some((product) => product.is_best_pick);
+
   return (
     <>
       <section className="hero-section">
@@ -283,7 +285,7 @@ function HomePage({ token }) {
         </div>
         <div className="product-grid product-rail">
           {featured.length ? featured.slice(0, 4).map((product, index) => (
-            <ProductCard key={product.id} product={product} token={token} featured={index === 0} />
+            <ProductCard key={product.id} product={product} token={token} featured={product.is_best_pick || (!hasBestPick && index === 0)} />
           )) : <p>No products available.</p>}
         </div>
       </section>
@@ -943,6 +945,7 @@ function AdminDashboard({ token }) {
   const [productForm, setProductForm] = useState({
     sku: '', name: '', description: '', price: '', category_id: '', brand: '', size: '',
     color: '', material: '', condition_name: 'Excellent', stock_quantity: 1, image_url: '',
+    is_best_pick: false,
   });
 
   useEffect(() => {
@@ -965,8 +968,8 @@ function AdminDashboard({ token }) {
   }, [token]);
 
   const updateProductField = (event) => {
-    const { name, value } = event.target;
-    setProductForm((current) => ({ ...current, [name]: value }));
+    const { name, value, type, checked } = event.target;
+    setProductForm((current) => ({ ...current, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const addProduct = async (event) => {
@@ -982,7 +985,7 @@ function AdminDashboard({ token }) {
       }, token);
       setProductMessage(editingProductId ? 'Product updated successfully.' : 'Product added successfully.');
       setEditingProductId(null);
-      setProductForm({ sku: '', name: '', description: '', price: '', category_id: '', brand: '', size: '', color: '', material: '', condition_name: 'Excellent', stock_quantity: 1, image_url: '' });
+      setProductForm({ sku: '', name: '', description: '', price: '', category_id: '', brand: '', size: '', color: '', material: '', condition_name: 'Excellent', stock_quantity: 1, image_url: '', is_best_pick: false });
       setProductImage(null);
       apiFetch('/admin/inventory', {}, token).then((data) => setInventory(data));
       apiFetch('/admin/dashboard', {}, token).then((data) => setDashboard(data));
@@ -999,6 +1002,7 @@ function AdminDashboard({ token }) {
       category_id: product.category_id || '', brand: product.brand || '', size: product.size || '', color: product.color || '',
       material: product.material || '', condition_name: product.condition_name || 'Excellent', stock_quantity: product.stock_quantity ?? 0,
       image_url: product.image_url || '',
+      is_best_pick: !!product.is_best_pick,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1006,7 +1010,7 @@ function AdminDashboard({ token }) {
   const cancelEdit = () => {
     setEditingProductId(null);
     setProductImage(null);
-    setProductForm({ sku: '', name: '', description: '', price: '', category_id: '', brand: '', size: '', color: '', material: '', condition_name: 'Excellent', stock_quantity: 1, image_url: '' });
+    setProductForm({ sku: '', name: '', description: '', price: '', category_id: '', brand: '', size: '', color: '', material: '', condition_name: 'Excellent', stock_quantity: 1, image_url: '', is_best_pick: false });
   };
 
   const updateOrderStatus = async (orderId, status) => {
@@ -1078,6 +1082,10 @@ function AdminDashboard({ token }) {
             <small>{productImage ? productImage.name : 'Choose JPG, PNG, or WebP up to 5MB'}</small>
           </label>
           <textarea className="wide-field" name="description" value={productForm.description} onChange={updateProductField} placeholder="Description" />
+          <label className="best-pick-toggle wide-field" title="The chosen product shows the lime BEST PICK badge on the homepage">
+            <input type="checkbox" name="is_best_pick" checked={productForm.is_best_pick} onChange={updateProductField} />
+            <span>Best pick — show the homepage badge on this product</span>
+          </label>
           <button className="primary-btn" type="submit">{editingProductId ? 'SAVE CHANGES' : 'ADD PRODUCT'}</button>
           {editingProductId && <button className="ghost-btn" type="button" onClick={cancelEdit}>CANCEL</button>}
           {productMessage && <small className="form-message">{productMessage}</small>}
@@ -1109,7 +1117,7 @@ function AdminDashboard({ token }) {
           <thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Status</th><th>Restock</th><th>Action</th></tr></thead>
           <tbody>
             {inventory.map((item) => (
-              <tr key={item.id}><td>{item.name}</td><td>{item.sku}</td><td>{item.stock_quantity}</td><td>{item.inventory_status || 'In Stock'}</td><td><div className="restock-control"><input type="number" min="1" placeholder="Qty" value={restockValues[item.id] || ''} onChange={(event) => setRestockValues((current) => ({ ...current, [item.id]: event.target.value }))} /><button className="table-action" type="button" onClick={() => restockProduct(item.id)}>RESTOCK</button></div></td><td><button className="table-action" type="button" onClick={() => editProduct(item)}>EDIT</button></td></tr>
+              <tr key={item.id}><td>{item.name}{item.is_best_pick ? <span className="best-pick-chip">★ BEST PICK</span> : null}</td><td>{item.sku}</td><td>{item.stock_quantity}</td><td>{item.inventory_status || 'In Stock'}</td><td><div className="restock-control"><input type="number" min="1" placeholder="Qty" value={restockValues[item.id] || ''} onChange={(event) => setRestockValues((current) => ({ ...current, [item.id]: event.target.value }))} /><button className="table-action" type="button" onClick={() => restockProduct(item.id)}>RESTOCK</button></div></td><td><button className="table-action" type="button" onClick={() => editProduct(item)}>EDIT</button></td></tr>
             ))}
           </tbody>
         </table>

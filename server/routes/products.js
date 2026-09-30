@@ -1,5 +1,6 @@
 import express from "express";
 import { supabase } from "../../lib/supabase.js";
+import { hasBestPickColumn, parseBestPick } from "../../lib/best-pick.js";
 
 const router = express.Router();
 
@@ -105,11 +106,19 @@ router.get("/", async (req, res) => {
 // GET featured products
 router.get("/featured", async (req, res) => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("products")
       .select("*")
       .neq("status", "archived")
-      .gt("stock_quantity", 0)
+      .gt("stock_quantity", 0);
+
+    // The admin's chosen Best Pick always surfaces first in every section
+    // that renders this list.
+    if (await hasBestPickColumn()) {
+      query = query.order("is_best_pick", { ascending: false });
+    }
+
+    const { data, error } = await query
       .order("created_at", { ascending: false })
       .limit(8);
 
