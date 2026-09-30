@@ -22,6 +22,7 @@ const categoryList = [
   'Polo Shirts',
   'Vintage',
   'Streetwear',
+  'Retro',
 ];
 
 const productImageUrl = (imageUrl) => imageUrl?.startsWith('/uploads/') ? `${API_ORIGIN}${imageUrl}` : imageUrl;
