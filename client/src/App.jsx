@@ -1086,6 +1086,9 @@ function AdminDashboard({ token }) {
             <input type="checkbox" name="is_best_pick" checked={productForm.is_best_pick} onChange={updateProductField} />
             <span>Best pick — show the homepage badge on this product</span>
           </label>
+          {inventory.length > 0 && !('is_best_pick' in inventory[0]) && (
+            <small className="form-message">Not active yet: the one-time Best Pick database update still needs to be run in Supabase.</small>
+          )}
           <button className="primary-btn" type="submit">{editingProductId ? 'SAVE CHANGES' : 'ADD PRODUCT'}</button>
           {editingProductId && <button className="ghost-btn" type="button" onClick={cancelEdit}>CANCEL</button>}
           {productMessage && <small className="form-message">{productMessage}</small>}
