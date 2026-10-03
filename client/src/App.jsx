@@ -842,7 +842,7 @@ function CheckoutPage({ token, user }) {
 
   const updateField = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   const subtotal = cartItems.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0);
-  const shipping = cartItems.length ? 120 : 0;
+  const shipping = cartItems.length ? 20 : 0;
   const total = subtotal + shipping;
 
   const removeCheckoutItem = async (itemId) => {
