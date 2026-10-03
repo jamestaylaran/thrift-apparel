@@ -256,8 +256,8 @@ function HomePage({ token }) {
         <div className="container hero-grid">
           <div>
             <p className="eyebrow">Curated secondhand style</p>
-            <h1>Retro fits.<br /><em>New attitude.</em></h1>
-            <p className="lead">Throwback streetwear, rare layers, and one-off pieces for your everyday rotation.</p>
+            <h1>Streetwear finds.<br /><em>New attitude.</em></h1>
+            <p className="lead">Streetwear, vintage finds, and one-off thrifted pieces for your everyday rotation.</p>
             <div className="cta-row">
               <Link className="primary-btn" to="/shop">SHOP THE DROP <span>↗</span></Link>
             </div>
@@ -265,8 +265,8 @@ function HomePage({ token }) {
           </div>
           <div className="hero-visual">
             <div className="hero-collage">
-              <div className="hero-cell"><img src="https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&w=900&q=85" alt="Retro streetwear outfit" /></div>
-              <div className="hero-cell"><img src="https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=900&q=85" alt="Streetwear model wearing a retro outfit" /></div>
+              <div className="hero-cell"><img src="https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&w=900&q=85" alt="Thrifted streetwear on a rack" /></div>
+              <div className="hero-cell"><img src="https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=900&q=85" alt="Model wearing streetwear" /></div>
               <div className="hero-cell"><img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=85" alt="Vintage fashion model" /></div>
             </div>
           </div>
