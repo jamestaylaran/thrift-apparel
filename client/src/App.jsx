@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { supabase, signIn, signUp, adminSignIn, signOut, fetchProfile, API_BASE } from './lib/supabase';
+import heroImage1 from './assets/hero-1.jpg';
+import heroImage2 from './assets/hero-2.jpg';
+import heroImage3 from './assets/hero-3.jpg';
 import './App.css';
 
 const API_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
@@ -265,9 +268,9 @@ function HomePage({ token }) {
           </div>
           <div className="hero-visual">
             <div className="hero-collage">
-              <div className="hero-cell"><img src="https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&w=900&q=85" alt="Thrifted streetwear on a rack" /></div>
-              <div className="hero-cell"><img src="https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=900&q=85" alt="Model wearing streetwear" /></div>
-              <div className="hero-cell"><img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=85" alt="Vintage fashion model" /></div>
+              <div className="hero-cell"><img src={heroImage1} alt="Thrift Apparel streetwear fit" /></div>
+              <div className="hero-cell"><img src={heroImage2} alt="Thrift Apparel streetwear look" /></div>
+              <div className="hero-cell"><img src={heroImage3} alt="Vintage streetwear outfit" /></div>
             </div>
           </div>
         </div>
