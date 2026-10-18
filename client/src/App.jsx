@@ -146,7 +146,7 @@ function AppLayout({ token, user, logout, onAuth }) {
 
   return (
     <>
-      <div className="announcement-bar" aria-label="Store announcement"><div className="announcement-track"><span>SHOP SECOND-HAND SEPTEMBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND SEPTEMBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND SEPTEMBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND SEPTEMBER SALE - 30-50% OFF EVERYTHING!</span></div></div>
+      <div className="announcement-bar" aria-label="Store announcement"><div className="announcement-track"><span>SHOP SECOND-HAND OCTOBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND OCTOBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND OCTOBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND OCTOBER SALE - 30-50% OFF EVERYTHING!</span></div></div>
       <header className="site-header">
         <div className="container nav-wrap">
           <button
@@ -297,7 +297,7 @@ function HomePage({ token }) {
       <section className="campaign-banner">
         <img src={campaignImage} alt="Thrift Apparel secondhand fit" />
         <div className="campaign-copy">
-          <p className="eyebrow">The September edit</p>
+          <p className="eyebrow">The October edit</p>
           <h2>Shop<br /><em>secondhand.</em></h2>
           <Link className="primary-btn" to="/shop">SHOP THE SALE <span>↗</span></Link>
         </div>
