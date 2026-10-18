@@ -4,6 +4,7 @@ import { supabase, signIn, signUp, adminSignIn, signOut, fetchProfile, API_BASE 
 import heroImage1 from './assets/hero-1.jpg';
 import heroImage2 from './assets/hero-2.jpg';
 import heroImage3 from './assets/hero-3.jpg';
+import campaignImage from './assets/campaign.jpg';
 import './App.css';
 
 const API_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
@@ -294,7 +295,7 @@ function HomePage({ token }) {
       </section>
 
       <section className="campaign-banner">
-        <img src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1800&q=85" alt="People wearing secondhand fashion" />
+        <img src={campaignImage} alt="Thrift Apparel secondhand fit" />
         <div className="campaign-copy">
           <p className="eyebrow">The September edit</p>
           <h2>Shop<br /><em>secondhand.</em></h2>
