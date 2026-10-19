@@ -31,6 +31,29 @@ const categoryList = [
 
 const productImageUrl = (imageUrl) => imageUrl?.startsWith('/uploads/') ? `${API_ORIGIN}${imageUrl}` : imageUrl;
 
+const FAQS = {
+  Vintage: [
+    { q: 'What is vintage clothing?', a: 'Vintage pieces are pre-loved finds picked for their quality, cut, and character. Every item is checked and cleaned before it reaches the shop.' },
+    { q: 'Can I sell you my vintage stuff?', a: "Yes — we buy good-condition thrifted and vintage pieces. Send photos through our contact page and we'll reply with an offer." },
+    { q: 'Where do you source vintage clothing from?', a: 'From local thrift stores, ukay-ukay finds, and community closets — every piece is carefully selected before it reaches the shop.' },
+  ],
+  Orders: [
+    { q: 'How do I place an order?', a: 'Add a piece to your cart, hit BUY NOW, fill in your shipping details, and confirm. Your order appears right away under My Orders.' },
+    { q: 'Can I cancel or change my order?', a: "Need to change something? Contact us within 24 hours with your order number — if it hasn't been packed yet, we'll sort it out." },
+    { q: 'How do I track my order?', a: 'Log in and open My Orders to see the status of every order, from processing to delivered.' },
+  ],
+  Shipping: [
+    { q: 'How much is shipping?', a: 'Shipping is a flat ₱20 fee anywhere in the Philippines, shown at checkout before you confirm your order.' },
+    { q: 'How long does delivery take?', a: 'Metro Manila usually arrives in 2-3 business days; provincial addresses take 3-7 business days after your order is packed.' },
+    { q: 'Do you ship nationwide?', a: 'Yes — we ship to any valid address in the Philippines.' },
+  ],
+  Returns: [
+    { q: 'Can I return an item?', a: 'Need to return an item? Contact us within 7 days of delivery with your order number and a photo of the item.' },
+    { q: 'What if my item arrives damaged?', a: 'Send us a photo of the item and your order number within 7 days of delivery and we will make it right.' },
+    { q: 'How do I start a return?', a: 'Email returns@thriftapparel.com with your order number and a photo of the item — our team will take it from there.' },
+  ],
+};
+
 async function apiFetch(path, options = {}, token = null) {
   const isFormData = options.body instanceof FormData;
   const response = await fetch(`${API_BASE}${path}`, {
@@ -144,6 +167,11 @@ function AppLayout({ token, user, logout, onAuth }) {
       .catch(() => setCartCount(0));
   }, [token, isAdmin]);
 
+  // Start every new page at the top (BUY NOW, ADD TO CART, etc. used to inherit the old scroll position)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   return (
     <>
       <div className="announcement-bar" aria-label="Store announcement"><div className="announcement-track"><span>SHOP SECOND-HAND OCTOBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND OCTOBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND OCTOBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND OCTOBER SALE - 30-50% OFF EVERYTHING!</span></div></div>
@@ -245,6 +273,7 @@ function AppLayout({ token, user, logout, onAuth }) {
 
 function HomePage({ token }) {
   const [featured, setFeatured] = useState([]);
+  const [faqTab, setFaqTab] = useState('Vintage');
 
   useEffect(() => {
     apiFetch('/products/featured')
@@ -317,12 +346,16 @@ function HomePage({ token }) {
       <section className="faq-section">
         <p className="eyebrow">Need to know</p>
         <h2>Frequently asked questions</h2>
-        <div className="faq-tabs"><span className="active">Vintage</span><span>Orders</span><span>Shipping</span><span>Returns</span></div>
+        <div className="faq-tabs">
+          {Object.keys(FAQS).map((tab) => (
+            <span key={tab} className={faqTab === tab ? 'active' : ''} onClick={() => setFaqTab(tab)}>{tab}</span>
+          ))}
+        </div>
         <div className="faq-list">
-          {['What is vintage clothing?', 'Can I sell you my vintage stuff?', 'Where do you source vintage clothing from?'].map((question) => (
-            <details key={question}>
-              <summary>{question}<span>+</span></summary>
-              <p>Every piece is carefully selected and checked before it reaches the shop. See our contact page for more details.</p>
+          {FAQS[faqTab].map(({ q, a }) => (
+            <details key={q}>
+              <summary>{q}<span>+</span></summary>
+              <p>{a}</p>
             </details>
           ))}
         </div>

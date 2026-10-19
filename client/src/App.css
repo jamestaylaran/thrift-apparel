@@ -1346,10 +1346,15 @@ textarea {
 }
 
 .faq-tabs span {
+  cursor: pointer;
   font-size: 12px;
   font-weight: 700;
   padding: 12px 18px;
   text-transform: uppercase;
+}
+
+.faq-tabs span:not(.active):hover {
+  background: #f0eee9;
 }
 
 .faq-tabs .active {
@@ -1379,10 +1384,16 @@ textarea {
 }
 
 .faq-list summary span {
+  display: inline-block;
   float: right;
   font-size: 24px;
   font-weight: 400;
   line-height: 0.7;
+  transition: transform 0.2s ease;
+}
+
+.faq-list details[open] summary span {
+  transform: rotate(45deg);
 }
 
 .faq-list details p {
