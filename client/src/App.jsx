@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { supabase, signIn, signUp, adminSignIn, signOut, fetchProfile, API_BASE } from './lib/supabase';
 import heroImage1 from './assets/hero-1.jpg';
@@ -172,8 +172,129 @@ function AppLayout({ token, user, logout, onAuth }) {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
+  // Scroll progress bar + custom scrollbar thumb + hero cue fade (rAF-throttled)
+  useEffect(() => {
+    let ticking = false;
+    const update = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      document.documentElement.style.setProperty('--scroll-p', String(progress));
+      const cue = document.querySelector('.scroll-cue');
+      if (cue) cue.style.opacity = String(Math.max(0, 1 - window.scrollY / 280));
+      ticking = false;
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    update();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [location.pathname]);
+
+  // Reveal-on-scroll: sections fade/slide in once, then stay put
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      }),
+      { threshold: 0.15 },
+    );
+    const scan = () => document.querySelectorAll('.reveal:not(.is-visible)').forEach((el) => observer.observe(el));
+    scan();
+    const mutations = new MutationObserver(scan);
+    mutations.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      mutations.disconnect();
+    };
+  }, [location.pathname]);
+
+  // Custom cursor ring (desktop pointers only, like the reference site)
+  useEffect(() => {
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return undefined;
+    const ring = document.querySelector('.cursor-ring');
+    if (!ring) return undefined;
+    let targetX = -100;
+    let targetY = -100;
+    let x = -100;
+    let y = -100;
+    let frame = requestAnimationFrame(function follow() {
+      x += (targetX - x) * 0.18;
+      y += (targetY - y) * 0.18;
+      ring.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      frame = requestAnimationFrame(follow);
+    });
+    const move = (event) => {
+      targetX = event.clientX;
+      targetY = event.clientY;
+      ring.classList.add('on');
+    };
+    const over = (event) => {
+      ring.classList.toggle('big', Boolean(event.target.closest('a, button')));
+    };
+    const leave = () => ring.classList.remove('on');
+    document.addEventListener('pointermove', move, { passive: true });
+    document.addEventListener('pointerover', over, { passive: true });
+    document.documentElement.addEventListener('pointerleave', leave);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerover', over);
+      document.documentElement.removeEventListener('pointerleave', leave);
+    };
+  }, []);
+
+  // Custom scrollbar rail: drag the thumb to scroll the page
+  const railDrag = useRef(false);
+  const railMove = (event) => {
+    if (!railDrag.current) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const thumbHeight = 70;
+    const travel = rect.height - thumbHeight;
+    if (travel <= 0) return;
+    const progress = Math.min(1, Math.max(0, (event.clientY - rect.top - thumbHeight / 2) / travel));
+    window.scrollTo({ top: progress * (document.documentElement.scrollHeight - window.innerHeight) });
+  };
+  const railDown = (event) => {
+    railDrag.current = true;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.currentTarget.classList.add('grab');
+    railMove(event);
+  };
+  const railUp = (event) => {
+    railDrag.current = false;
+    event.currentTarget.classList.remove('grab');
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      // pointer already released
+    }
+  };
+
   return (
     <>
+      <div className="progress-bar" aria-hidden="true" />
+      <div
+        className="scroll-rail"
+        aria-hidden="true"
+        onPointerDown={railDown}
+        onPointerMove={railMove}
+        onPointerUp={railUp}
+        onPointerCancel={railUp}
+      >
+        <span className="scroll-thumb" />
+      </div>
+      <div className="cursor-ring" aria-hidden="true" />
       <div className="announcement-bar" aria-label="Store announcement"><div className="announcement-track"><span>SHOP SECOND-HAND OCTOBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND OCTOBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND OCTOBER SALE - 30-50% OFF EVERYTHING!</span><span>SHOP SECOND-HAND OCTOBER SALE - 30-50% OFF EVERYTHING!</span></div></div>
       <header className="site-header">
         <div className="container nav-wrap">
@@ -197,7 +318,7 @@ function AppLayout({ token, user, logout, onAuth }) {
           </nav>
 
           <div className="nav-actions">
-            {!isAdminArea && <><Link to="/shop" className="icon-link nav-icon" aria-label="Search">⌕</Link><Link to="/wishlist" className="icon-link nav-icon" aria-label="Wishlist">♡</Link><Link to="/cart" className="icon-link nav-icon cart-icon" aria-label="Cart">▢<b>{cartCount || 0}</b></Link></>}
+            {!isAdminArea && <><Link to="/shop" className="icon-link nav-icon" aria-label="Search">⌕</Link><Link to="/wishlist" className="icon-link nav-icon" aria-label="Wishlist">♡</Link><Link to="/cart" className="icon-link nav-icon cart-icon" aria-label="Cart">▢<b key={cartCount}>{cartCount || 0}</b></Link></>}
             {user ? (
               <div className="user-menu">
                 <button className="user-menu-trigger" type="button" onClick={() => setUserMenuOpen((open) => !open)} aria-expanded={userMenuOpen}>Hi, {user.name}</button>
@@ -234,7 +355,7 @@ function AppLayout({ token, user, logout, onAuth }) {
         </Routes>
       </main>
 
-      {!isAdminArea && <footer className="site-footer">
+      {!isAdminArea && <footer className="site-footer reveal">
         <div className="container footer-grid">
           <div>
             <h3>THRIFT APPAREL</h3>
@@ -304,9 +425,18 @@ function HomePage({ token }) {
             </div>
           </div>
         </div>
+        <button
+          className="scroll-cue"
+          type="button"
+          aria-label="Scroll to products"
+          onClick={() => document.getElementById('fresh-rail')?.scrollIntoView({ behavior: 'smooth' })}
+        >
+          <span>Scroll</span>
+          <i />
+        </button>
       </section>
 
-      <section className="container section-block">
+      <section className="container section-block reveal" id="fresh-rail">
         <div className="section-heading">
           <h2>Fresh from the rail</h2>
           <Link className="section-link" to="/shop">View all <span>→</span></Link>
@@ -323,7 +453,7 @@ function HomePage({ token }) {
         </div>
       </section>
 
-      <section className="campaign-banner">
+      <section className="campaign-banner reveal">
         <img src={campaignImage} alt="Thrift Apparel secondhand fit" />
         <div className="campaign-copy">
           <p className="eyebrow">The October edit</p>
@@ -332,7 +462,7 @@ function HomePage({ token }) {
         </div>
       </section>
 
-      <section className="container section-block">
+      <section className="container section-block reveal">
         <div className="section-heading">
           <h2>More good stuff</h2>
         </div>
@@ -343,7 +473,7 @@ function HomePage({ token }) {
         </div>
       </section>
 
-      <section className="faq-section">
+      <section className="faq-section reveal">
         <p className="eyebrow">Need to know</p>
         <h2>Frequently asked questions</h2>
         <div className="faq-tabs">
@@ -536,7 +666,19 @@ function ProductCard({ product, token, featured = false }) {
   };
 
   return (
-    <article className="product-card">
+    <article
+      className="product-card"
+      onPointerMove={(event) => {
+        if (event.pointerType !== 'mouse') return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        event.currentTarget.style.setProperty('--rx', `${-((event.clientY - rect.top) / rect.height - 0.5) * 8}deg`);
+        event.currentTarget.style.setProperty('--ry', `${((event.clientX - rect.left) / rect.width - 0.5) * 8}deg`);
+      }}
+      onPointerLeave={(event) => {
+        event.currentTarget.style.setProperty('--rx', '0deg');
+        event.currentTarget.style.setProperty('--ry', '0deg');
+      }}
+    >
       <div className="product-image-wrap" onClick={() => navigate(`/product/${product.id}`)}>
       {featured && <span className="best-pick-badge">BEST PICK</span>}
         <img src={productImageUrl(product.image_url) || 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=80'} alt={product.name} />
@@ -560,7 +702,7 @@ function ProductCard({ product, token, featured = false }) {
           </button>
           <button type="button" className="primary-btn small" onClick={buyNow}>BUY NOW</button>
         </div>
-        {message && <small>{message}</small>}
+        {message && <small className="card-msg">{message}</small>}
       </div>
     </article>
   );

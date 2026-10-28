@@ -3221,3 +3221,430 @@ textarea:focus {
   padding: 4px 8px;
   vertical-align: middle;
 }
+
+/* ==========================================================================
+   Motion system: progress bar, custom scrollbar, cursor ring, scroll
+   reveals, entrances and micro-interactions
+   ========================================================================== */
+
+/* Hide the native scrollbar — the custom rail replaces it */
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+/* Top scroll progress bar */
+.progress-bar {
+  background: linear-gradient(90deg, var(--ink), var(--lime));
+  height: 3px;
+  left: 0;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  top: 0;
+  transform: scaleX(var(--scroll-p, 0));
+  transform-origin: 0 0;
+  z-index: 70;
+}
+
+/* Custom draggable scrollbar on the right edge (desktop only) */
+.scroll-rail {
+  bottom: 44px;
+  cursor: grab;
+  display: none;
+  position: fixed;
+  right: 6px;
+  top: 64px;
+  touch-action: none;
+  width: 34px;
+  z-index: 60;
+}
+
+@media (hover: hover) and (pointer: fine) and (min-width: 1024px) {
+  .scroll-rail {
+    display: block;
+  }
+}
+
+.scroll-rail.grab {
+  cursor: grabbing;
+}
+
+.scroll-rail::before,
+.scroll-rail::after {
+  background: linear-gradient(#4a4a4a, var(--ink));
+  border-radius: 3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  content: '';
+  height: 7px;
+  left: 5px;
+  position: absolute;
+  right: 5px;
+}
+
+.scroll-rail::before {
+  top: -9px;
+}
+
+.scroll-rail::after {
+  bottom: -9px;
+}
+
+.scroll-thumb {
+  background: linear-gradient(#3d3d3d, var(--ink));
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  height: 70px;
+  left: 5px;
+  position: absolute;
+  right: 5px;
+  top: calc(var(--scroll-p, 0) * (100% - 70px));
+}
+
+.scroll-rail:hover .scroll-thumb,
+.scroll-rail.grab .scroll-thumb {
+  filter: drop-shadow(0 0 6px rgba(217, 242, 63, 0.65)) drop-shadow(0 4px 5px rgba(0, 0, 0, 0.4));
+}
+
+/* Custom cursor ring (desktop pointers only) */
+.cursor-ring {
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+  display: none;
+  height: 38px;
+  left: 0;
+  margin: -19px 0 0 -19px;
+  mix-blend-mode: difference;
+  opacity: 0;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  transition: width 0.25s, height 0.25s, margin 0.25s, background 0.25s, opacity 0.3s;
+  width: 38px;
+  z-index: 9999;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cursor-ring {
+    display: block;
+  }
+}
+
+.cursor-ring.on {
+  opacity: 1;
+}
+
+.cursor-ring.big {
+  background: #fff;
+  height: 72px;
+  margin: -36px 0 0 -36px;
+  width: 72px;
+}
+
+/* Hero scroll cue: animated line that fades as you scroll */
+.hero-section {
+  position: relative;
+}
+
+.scroll-cue {
+  background: none;
+  border: none;
+  bottom: 4px;
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  font-size: 11px;
+  gap: 8px;
+  justify-items: center;
+  left: 50%;
+  letter-spacing: 0.3em;
+  padding: 0;
+  position: absolute;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+
+.scroll-cue i {
+  animation: cue 2s ease-in-out infinite;
+  background: linear-gradient(var(--ink), transparent);
+  height: 46px;
+  transform-origin: top;
+  width: 1px;
+}
+
+@media (max-width: 640px) {
+  .scroll-cue {
+    display: none;
+  }
+}
+
+/* Reveal-on-scroll */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Hero entrance: staggered blur-in, headline also collapses its letter-spacing */
+.hero-section .eyebrow,
+.hero-section .lead,
+.hero-section .cta-row,
+.hero-section .hero-notes {
+  animation: heroIn 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.hero-section .eyebrow {
+  animation-delay: 0.05s;
+}
+
+.hero-grid h1 {
+  animation: heroTitleIn 0.95s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
+}
+
+.hero-section .lead {
+  animation-delay: 0.35s;
+}
+
+.hero-section .cta-row {
+  animation-delay: 0.5s;
+}
+
+.hero-section .hero-notes {
+  animation-delay: 0.65s;
+}
+
+@keyframes heroIn {
+  0% {
+    filter: blur(12px);
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  100% {
+    filter: blur(0);
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes heroTitleIn {
+  0% {
+    filter: blur(14px);
+    letter-spacing: 0.25em;
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    filter: blur(0);
+    letter-spacing: normal;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Product cards fade+scale in, then keep their hover lift and 3D tilt */
+.product-card {
+  animation: cardIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+.product-card:nth-child(2) {
+  animation-delay: 0.07s;
+}
+
+.product-card:nth-child(3) {
+  animation-delay: 0.14s;
+}
+
+.product-card:nth-child(4) {
+  animation-delay: 0.21s;
+}
+
+.product-card:nth-child(5) {
+  animation-delay: 0.28s;
+}
+
+.product-card:nth-child(6) {
+  animation-delay: 0.35s;
+}
+
+.product-card:nth-child(7) {
+  animation-delay: 0.42s;
+}
+
+.product-card:nth-child(8) {
+  animation-delay: 0.49s;
+}
+
+@keyframes cardIn {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.94);
+  }
+
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.product-card:hover .product-image-wrap img {
+  transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(1.05);
+}
+
+/* Primary button shine sweep on hover */
+.primary-btn {
+  overflow: hidden;
+  position: relative;
+}
+
+.primary-btn::after {
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  bottom: 0;
+  content: '';
+  left: -60%;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  transform: skewX(-18deg);
+  transition: left 0.55s ease;
+  width: 45%;
+}
+
+.primary-btn:hover::after {
+  left: 120%;
+}
+
+/* Film grain overlay */
+body::after {
+  animation: grain 1s steps(6) infinite;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  content: '';
+  inset: -50%;
+  opacity: 0.06;
+  pointer-events: none;
+  position: fixed;
+  z-index: 90;
+}
+
+@keyframes grain {
+
+  20% {
+    transform: translate(-3%, 2%);
+  }
+
+  40% {
+    transform: translate(2%, -3%);
+  }
+
+  60% {
+    transform: translate(-2%, -1%);
+  }
+
+  80% {
+    transform: translate(3%, 3%);
+  }
+}
+
+/* Announcement ticker pauses on hover */
+.announcement-bar:hover .announcement-track {
+  animation-play-state: paused;
+}
+
+/* Cart badge pops whenever the count changes */
+@keyframes badgePop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+
+  60% {
+    transform: scale(1.25);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.cart-icon b {
+  animation: badgePop 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+/* Card message ("Added to cart.") slides up */
+@keyframes toastIn {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.9);
+  }
+
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card-msg {
+  animation: toastIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  display: block;
+  padding-top: 8px;
+}
+
+/* Non-home pages fade in on mount */
+.page-shell {
+  animation: pageIn 0.45s ease backwards;
+}
+
+@keyframes pageIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Respect reduced-motion preferences: show everything, animate nothing */
+@media (prefers-reduced-motion: reduce) {
+
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .progress-bar,
+  .scroll-rail,
+  .cursor-ring,
+  .scroll-cue,
+  body::after {
+    display: none !important;
+  }
+
+  .hero-section .eyebrow,
+  .hero-grid h1,
+  .hero-section .lead,
+  .hero-section .cta-row,
+  .hero-section .hero-notes,
+  .product-card,
+  .page-shell,
+  .cart-icon b,
+  .card-msg,
+  .announcement-track {
+    animation: none !important;
+  }
+}
