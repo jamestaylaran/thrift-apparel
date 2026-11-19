@@ -1,0 +1,31 @@
+# Keeps the free-tier Supabase project marked "active" so it never auto-pauses.
+# Free projects pause after 7 days with no API activity; one tiny daily request prevents that.
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '23 3 * * *' # daily at 03:23 UTC (11:23 AM PHT) — off the top of the hour so GitHub doesn't delay it
+  workflow_dispatch: # gives you a "Run workflow" button on the Actions tab
+
+jobs:
+  ping:
+    name: Ping Supabase REST API
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send an API request that counts as activity
+        env:
+          SUPABASE_URL: https://ygaaxvyhjiqigxeavfof.supabase.co
+          # Publishable (client-safe) key — the same one already committed in scripts/*.mjs
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_UwAbktHxDioIijYnkLdGRA_5rACGD8j
+        run: |
+          rest_status=$(curl -sS --max-time 30 -o /tmp/sb-ping.json -w '%{http_code}' \
+            -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            -H "Accept: application/json" \
+            "${SUPABASE_URL}/rest/v1/") || rest_status=000
+          echo "REST root: HTTP ${rest_status}"
+          if [ "${rest_status}" != "200" ]; then
+            echo "::error::Supabase looks paused or unreachable. Restore the project in https://supabase.com/dashboard"
+            exit 1
+          fi
+          echo "Project is active."
