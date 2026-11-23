@@ -22,10 +22,13 @@ jobs:
           rest_status=$(curl -sS --max-time 30 -o /tmp/sb-ping.json -w '%{http_code}' \
             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
             -H "Accept: application/json" \
-            "${SUPABASE_URL}/rest/v1/") || rest_status=000
-          echo "REST root: HTTP ${rest_status}"
+            "${SUPABASE_URL}/rest/v1/products?select=id&limit=1") || rest_status=000
+          echo "REST products: HTTP ${rest_status}"
           if [ "${rest_status}" != "200" ]; then
-            echo "::error::Supabase looks paused or unreachable. Restore the project in https://supabase.com/dashboard"
+            echo "Response body:"
+            head -c 300 /tmp/sb-ping.json || true
+            echo ""
+            echo "::error::Supabase looks paused, restoring, or unreachable. Check https://supabase.com/dashboard"
             exit 1
           fi
           echo "Project is active."
